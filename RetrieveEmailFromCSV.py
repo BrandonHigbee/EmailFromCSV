@@ -1,44 +1,55 @@
 # 		Author: Brandon Higbee
-# 		Last Modified: 8/17/2016
-
+# 		Last Modified: 2/14/2018
 ##		Description:
-## Open files named "excel_#" and read every word in them, looking for instances of words with @'s and .'s (emails)
-## When an email is found, it will remove any excess characters in it (uses reg expression at line 13) and exports it to a new .csv file named "excel___#"
-## The program in its current state will read multiple files in the directory it is located in, based on user input (line 16).
+## Open .csv files in the executable directory and reads every word in them, looking for instances of words with @'s and .'s (emails)
+## When an email is found, it will remove any excess characters in it (uses reg expression in ScrubWordToEmail function) and exports
+## it to a new .csv file with the same name in the 'cleaned' directory
 ## 
 ##		How to use:
-## Change every excel file you want to work with to a .csv file (warning: will delete formatting)
-## Rename every file to "excel_#", where # is replaced with 1 to the maximum numeber of files
-## Put this .py file in the directrory with the files and run the code. The program will create new files called "excel___#"
+## Slap your .csv files in the same directory as this script file and run it,
+## the cleaned files will be put in the directory /cleaned
 
-
+import os
 import re
+import glob
+import shutil
 
-#Removes excess characters and writes to file
-def ScrubAndWrite(email):
+def ScrubWordToEmail(word):
+    # Removes excess characters and returns something resembling an email.
+    # Currenly removes: phone numebers (###-###-####), symbols:  < > / ? , ! * ^ $ ( ) [ ] { } ; : ' - " %
+    email = re.sub(r'<|>|/|\?|,|!|\*|\^|\$|\(|\)|\[|\]|\{\}|;|:|\'|%|\|-|\"|([0-9]{3})-([0-9]{3})-([0-9]{4})', '', word)
     
-    newmail = re.sub(r'<|>|/|\?|,|!|\*|\^|\$|\(|\)|\[|\]|\{\}|;|:|\'|%|\|-|\"|([0-9]{3})-([0-9]{3})-([0-9]{4})', '', email)
-    #currenly removes: phone numebers (###-###-####), symbols:  < > / ? , ! * ^ $ ( ) [ ] { } ; : ' - " %
-    
-    print(newmail, file=writefile)
+    return email    
+
+def GetCSVFilesInDir(path):
+    return glob.glob(path)
 
 
-iteration = 0
-iterationMax = int(input("How many files to find emails in?: ")) #How many files to read?
+listOfCSVFiles = GetCSVFilesInDir("*.csv")
+
+# Delete existing cleaned directory and creates a new one.
+shutil.rmtree('cleaned', ignore_errors=True) 
+os.makedirs('cleaned', exist_ok=True)
+
+# For debugging.
+print(listOfCSVFiles)
+
+# Opens each file in the list, reads every word and pulls ones that look like emails.
+# When it finds a word, it will remove excess characters and write it to a file with the
+# same name in the 'cleaned' directory.
+for filePath in listOfCSVFiles:
+    with open('cleaned\\' + filePath, 'a') as writeFile:
+        with open(filePath, 'r') as readFile:
+            fileContents = readFile.read()
+            fileContentsAsCollection = fileContents.split()
+
+            for word in fileContentsAsCollection:
+                if "@" in word and "." in word:
+                    email = ScrubWordToEmail(word)
+                    print(email, file = writeFile)
+
+print('Scrubbed files can be found in the "cleaned" folder.')
 
 
-		
-while iteration != iterationMax:
-    iteration = iteration + 1
-    with open('excel___' + str(iteration) + '.csv','a') as writefile:
-        with open('excel_' + str(iteration) + '.csv','r') as readfile:  #open read file
-            f = readfile.read()                                         #import entire file contents into a string
-            f2 = f.split()                                              #split the string into a workable list/array
-    
-            for word in f2:                                             #for every member in that list
-                if "@" in word and "." in word:                         #if its an email (has @ and .)
-                    ScrubAndWrite(word)                                 #remove excess characters and export the word to file
-        
-        print("Finished reading and writing file #" + str(iteration))
 
-print('Mission complete.')
+
